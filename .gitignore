@@ -1,3 +1,4 @@
 node_modules
 .vscode
 cli-app.json
+token.json
