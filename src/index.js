@@ -96,5 +96,7 @@ export default class App extends Component {
     )
   }
 
+  // タイムラインコンポーネント生成
+  // TODO: タイムライン処理の追加
 
 }
