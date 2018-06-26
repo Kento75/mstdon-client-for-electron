@@ -3,69 +3,63 @@ import ReactDOM from 'react-dom'
 import fs from 'fs'
 import path from 'path'
 import Mastodon from 'mastodon-api'
-import { styles } from './styles.js'
+import {styles} from './styles.js'
 
-// コンポーネント定義
+// コンポーネントを定義
 export default class App extends Component {
-  constructor(props) {
+  constructor (props) {
     super(props)
     this.apiUri = 'https://pawoo.net/api/v1/'
     this.loadInfo()
     this.state = {
       tootdata: '',
-      timelines: [],
+      timelines: []
     }
   }
-
-  // マウント実行時処理
-  componentWillMount() {
+  // コンポーネントのマウント時の処理
+  componentWillMount () {
     this.loadTimelines()
     setInterval(() => {
       this.loadTimelines()
-    }, 1000 * 30)
+    }, 1000 * 30) // 30秒に1回リロード
   }
-
-  // APIクライアント生成処理
-  loadInfo() {
-    // アクセストークン取得
-    const file_path = path.join('token.json')
-
+  // APIクライアントの生成
+  loadInfo () {
+    // アクセストークンを取得
+    const f = path.join('token.json')
     try {
-      fs.statSync(file_path)
-    } catch(err) {
-      window.alert('先にアクセストークンを取得してください。')
+      fs.statSync(f)
+    } catch (err) {
+      window.alert('先にアクセストークンを取得してください')
       window.close()
       return
     }
-
-    this.token = fs.readFileSync(file_path)
-
-    // APIクライアント生成
+    this.token = fs.readFileSync(f)
+    // APIクライアントを生成
     this.mstdn = new Mastodon({
       access_token: this.token,
       timeout_ms: 60 * 1000,
       api_url: this.apiUri
     })
   }
-
-  // タイムライン読み込み
-  loadTimelines() {
+  // タイムラインの読み込み
+  loadTimelines () {
     this.mstdn.get('timelines/home', {})
       .then(res => {
         this.setState({timelines: res.data})
       })
   }
-
-  // テキストボックス更新時処理
-  handleText(e) {
+  // テキストボックスが更新されたときの処理
+  handleText (e) {
     this.setState({tootdata: e.target.value})
   }
-
-  // 発言(Toot)処理
-  toot(e) {
-    this.mstdn.post('statuses', {status: this.state.tootdata},
+  // 発言処理
+  toot (e) {
+    this.mstdn.post(
+      'statuses',
+      {status: this.state.tootdata},
       (err, data, res) => {
-        if(err) {
+        if (err) {
           console.error(err)
           return
         }
@@ -74,29 +68,53 @@ export default class App extends Component {
       }
     )
   }
-
-  // 描画処理
-  render() {
-    return (
-      <div>
-        <div style={styles.editorPad}>
-          <h1 style={styles.title}>Mastodon Client</h1>
-          <textarea
-            style={styles.editor}
-            value={this.state.tootdata}
-            onChange={e => this.handleText(e)}
-          />
-          <div>
-            <button onClick={e => this.toot(e)} />
-          </div>
+  // 描画
+  render () {
+    return (<div>
+      <div style={styles.editorPad}>
+        <h1 style={styles.title}>マストドンのクライアント</h1>
+        <textarea
+          style={styles.editor}
+          value={this.state.tootdata}
+          onChange={e => this.handleText(e)} />
+        <div>
+          <button onClick={e => this.toot(e)}>トゥート</button>
         </div>
-        <div style={{marginTop: 120}} />
-        {this.renderTimelines()}
       </div>
-    )
+      <div style={{marginTop: 125}} />
+      {this.renderTimelines()}
+    </div>)
   }
-
-  // タイムラインコンポーネント生成
-  // TODO: タイムライン処理の追加
-
+  // タイムラインの部分を生成
+  renderTimelines () {
+    const lines = this.state.timelines.map(e => {
+      console.log(e)
+      // ブーストがあった時の処理
+      let memo = null
+      if (e.reblog) {
+        memo = (<p style={styles.reblog}>
+          {e.account.display_name}さんがブーストしました
+          </p>)
+        e = e.reblog
+      }
+      // トゥートごとの描画内容
+      return (<div key={e.id} style={styles.content}>
+        <img style={styles.avatar}
+          src={e.account.avatar} />
+        <div style={styles.ctext}>
+          {memo}{e.account.display_name}
+          <span dangerouslySetInnerHTML={{
+            __html: e.content}} />
+        </div>
+        <div style={{clear: 'both'}} />
+      </div>)
+    })
+    return (<div>
+      <h2 style={styles.title}>タイムライン</h2>
+      {lines}</div>)
+  }
 }
+
+// DOMを書き換え
+ReactDOM.render(<App />,
+  document.getElementById('root'))
